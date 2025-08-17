@@ -127,4 +127,20 @@ object FMOD {
             OutputAAudioHeadphonesChanged()
         }
     }
+
+    // additions for subzero
+    @JvmStatic
+    fun getDevices(idk: Int): IntArray {
+        return intArrayOf(0);
+    }
+
+    @JvmStatic
+    fun getDeviceName(deviceIDPerhaps: Int): String {
+        return "(placeholder device name)";
+    }
+
+    @JvmStatic
+    fun getDeviceType(deviceIDPerhaps: Int): Int {
+        return 0;
+    }
 }

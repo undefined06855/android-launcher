@@ -3,7 +3,7 @@ package com.geode.launcher.utils
 import android.annotation.SuppressLint
 
 object Constants {
-    const val PACKAGE_NAME = "com.robtopx.geometryjump"
+    const val PACKAGE_NAME = "com.robtopx.geometrydashsubzero"
 
     const val COCOS_LIB_NAME = "cocos2dcpp"
     const val FMOD_LIB_NAME = "fmod"
@@ -14,13 +14,13 @@ object Constants {
     const val GJ_DATA_DIR = "/data/data/${PACKAGE_NAME}"
 
     // anything below this version code is blocked from opening the game
-    const val SUPPORTED_VERSION_CODE_MIN = 37L
+    const val SUPPORTED_VERSION_CODE_MIN = 0L
 
     // anything below this version code shows a warning on the main menu
-    const val SUPPORTED_VERSION_CODE_MIN_WARNING = 40L
+    const val SUPPORTED_VERSION_CODE_MIN_WARNING = 10L
 
     // anything above this version code will show a warning when starting the game
-    const val SUPPORTED_VERSION_CODE = 40L
+    const val SUPPORTED_VERSION_CODE = 10L
 
-    const val SUPPORTED_VERSION_STRING = "2.2.143"
+    const val SUPPORTED_VERSION_STRING = "2.2.145"
 }
