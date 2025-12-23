@@ -42,7 +42,7 @@ object NearbyConnectionsUtils {
 
     private val connectionLifecycleCallback = object : ConnectionLifecycleCallback() {
         override fun onConnectionInitiated(endpoint: String, info: ConnectionInfo) {
-            if (nearbyConnectionsEnabled) connectionInitiatedCallback(endpoint)
+            if (nearbyConnectionsEnabled) connectionInitiatedCallback(endpoint, info.authenticationDigits)
         }
 
         override fun onConnectionResult(endpoint: String, result: ConnectionResolution) {
@@ -182,7 +182,7 @@ object NearbyConnectionsUtils {
                 if (nearbyConnectionsEnabled) connectionRequestSuccessCallback(endpoint)
             }
             .addOnFailureListener { error ->
-                if (nearbyConnectionsEnabled) connectionRequestFailedCallback(endpoint, error.message ?: "unknown")
+                if (nearbyConnectionsEnabled) connectionRequestFailedCallback(endpoint, error.message ?: "unknown error")
             }
     }
 
@@ -214,8 +214,12 @@ object NearbyConnectionsUtils {
     }
 
     @JvmStatic
-    fun close(endpoint: String) {
-        TODO("balls")
+    fun disconnect(endpoint: String) {
+        if (!nearbyConnectionsEnabled) return
+
+        val context = activity.get() ?: return
+        Nearby.getConnectionsClient(context)
+            .disconnectFromEndpoint(endpoint)
     }
 
     // call enableDiscovery(enabled: Boolean) after providing local functions for all of these
@@ -237,9 +241,10 @@ object NearbyConnectionsUtils {
 
     external fun connectionRequestSuccessCallback(endpoint: String)
     external fun connectionRequestFailedCallback(endpoint: String, error: String)
-    external fun connectionInitiatedCallback(endpoint: String)
 
-    // call acceptConnection(endpoint: String) for both
+    external fun connectionInitiatedCallback(endpoint: String, digits: String) // at this point you should prompt
+
+    // call acceptConnection(endpoint: String) for both or rejectConnection(endpoint: String)
 
     external fun connectionSuccessCallback(endpoint: String)
     external fun connectionRejectedCallback(endpoint: String)
@@ -252,7 +257,7 @@ object NearbyConnectionsUtils {
     external fun dataSendUpdateCallback(endpoint: String, bytesTransferred: Long, totalBytes: Long, status: Int)
     external fun dataReceivedCallback(endpoint: String, data: ByteArray)
 
-    // call close(endpoint: String) here
+    // call disconnect(endpoint: String) here
 
     external fun connectionClosedCallback(endpoint: String)
 }
