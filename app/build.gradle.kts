@@ -114,6 +114,7 @@ dependencies {
     implementation ("com.mikepenz:multiplatform-markdown-renderer-android:0.38.1")
     implementation ("com.mikepenz:multiplatform-markdown-renderer-m3:0.38.1")
     implementation ("androidx.browser:browser:1.9.0")
+    implementation ("com.google.android.gms:play-services-nearby:19.3.0")
     debugImplementation ("androidx.compose.ui:ui-tooling")
     coreLibraryDesugaring ("com.android.tools:desugar_jdk_libs:2.1.5")
 }

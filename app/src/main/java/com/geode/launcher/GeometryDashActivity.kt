@@ -32,6 +32,7 @@ import com.geode.launcher.utils.DownloadUtils
 import com.geode.launcher.utils.GamePackageUtils
 import com.geode.launcher.utils.GeodeUtils
 import com.geode.launcher.utils.LaunchUtils
+import com.geode.launcher.utils.NearbyConnectionsUtils
 import com.geode.launcher.utils.PreferenceUtils
 import org.cocos2dx.lib.Cocos2dxGLSurfaceView
 import org.cocos2dx.lib.Cocos2dxHelper
@@ -165,6 +166,8 @@ class GeometryDashActivity : AppCompatActivity(), Cocos2dxHelper.Cocos2dxHelperL
 
         GeodeUtils.setContext(this)
         GeodeUtils.setCapabilityListener(this)
+
+        NearbyConnectionsUtils.setContext(this)
 
         tryLoadLibrary(gdPackageInfo, Constants.FMOD_LIB_NAME)
         tryLoadLibrary(gdPackageInfo, Constants.COCOS_LIB_NAME)
