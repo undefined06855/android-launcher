@@ -182,7 +182,7 @@ object NearbyConnectionsUtils {
                 if (nearbyConnectionsEnabled) connectionRequestSuccessCallback(endpoint)
             }
             .addOnFailureListener { error ->
-                if (nearbyConnectionsEnabled) connectionRequestFailedCallback(endpoint, error.message ?: "unknown error")
+                if (nearbyConnectionsEnabled) connectionRequestFailureCallback(endpoint, error.message ?: "unknown error")
             }
     }
 
@@ -240,7 +240,7 @@ object NearbyConnectionsUtils {
     // call requestConnection(endpoint: String) for the discoverer
 
     external fun connectionRequestSuccessCallback(endpoint: String)
-    external fun connectionRequestFailedCallback(endpoint: String, error: String)
+    external fun connectionRequestFailureCallback(endpoint: String, error: String)
 
     external fun connectionInitiatedCallback(endpoint: String, digits: String) // at this point you should prompt
 
