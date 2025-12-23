@@ -31,92 +31,105 @@ object NearbyConnectionsUtils {
     private var nearbyConnectionsName: String? = null
 
     private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
-        override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
-            // An endpoint was found. We request a connection to it.
-            val context = activity.get() ?: return
-            val name = nearbyConnectionsName ?: return
-            Nearby.getConnectionsClient(context)
-                .requestConnection(
-                    name,
-                    endpointId,
-                    connectionLifecycleCallback
-                )
-                .addOnSuccessListener {
-                    // We successfully requested a connection.
-                    // Now both sides must accept before the connection is established.
-                }
-                .addOnFailureListener { e ->
-                    // Nearby Connections failed to request the connection.
-                }
+        override fun onEndpointFound(endpoint: String, info: DiscoveredEndpointInfo) {
+            if (nearbyConnectionsEnabled) endpointFoundCallback(endpoint)
         }
 
-        override fun onEndpointLost(endpointId: String) {
-            // A previously discovered endpoint has gone away.
+        override fun onEndpointLost(endpoint: String) {
+            if (nearbyConnectionsEnabled) endpointLostCallback(endpoint)
         }
     }
 
     private val connectionLifecycleCallback = object : ConnectionLifecycleCallback() {
-        override fun onConnectionInitiated(endpointId: String, info: ConnectionInfo) {
-//            AlertDialog.Builder(context)
-//                .setTitle("Accept connection to ${info.endpointName}")
-//                .setMessage(
-//                    "Confirm the code matches on both devices: ${info.authenticationDigits}"
-//                )
-//                .setPositiveButton("Accept") { _, _ ->
-//                    // The user confirmed, so we can accept the connection.
-//                    Nearby.getConnectionsClient(context)
-//                        .acceptConnection(endpointId, payloadCallback)
-//                }
-//                .setNegativeButton(android.R.string.cancel) { _, _ ->
-//                    // The user canceled, so we should reject the connection.
-//                    Nearby.getConnectionsClient(context)
-//                        .rejectConnection(endpointId)
-//                }
-//                .setIcon(android.R.drawable.ic_dialog_alert)
-//                .show()
+        override fun onConnectionInitiated(endpoint: String, info: ConnectionInfo) {
+            if (nearbyConnectionsEnabled) connectionInitiatedCallback(endpoint)
         }
 
-        override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
+        override fun onConnectionResult(endpoint: String, result: ConnectionResolution) {
             when (result.status.statusCode) {
                 ConnectionsStatusCodes.STATUS_OK -> {
-                    // We're connected! Can now start sending and receiving data.
+                    if (nearbyConnectionsEnabled) connectionSuccessCallback(endpoint)
                 }
 
                 ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED -> {
-                    // The connection was rejected by one or both sides.
+                    if (nearbyConnectionsEnabled) connectionRejectedCallback(endpoint)
                 }
 
                 ConnectionsStatusCodes.STATUS_ERROR -> {
-                    // The connection broke before it was able to be accepted.
+                    if (nearbyConnectionsEnabled) connectionBrokenCallback(endpoint)
                 }
 
                 else -> {
-                    // Unknown status code
+                    if (nearbyConnectionsEnabled) connectionBrokenCallback(endpoint)
                 }
             }
         }
 
-        override fun onDisconnected(endpointId: String) {
-            // We've been disconnected from this endpoint.
-            // No more data can be sent or received.
+        override fun onDisconnected(endpoint: String) {
+            if (nearbyConnectionsEnabled) connectionClosedCallback(endpoint)
         }
     }
 
     private val payloadCallback = object : PayloadCallback() {
-        public override fun onPayloadReceived(endpointId: String, payload: Payload) {
-            // This always gets the full data of the payload. Is null if it's not a BYTES payload.
-            if (payload.type == Payload.Type.BYTES) {
-                val receivedBytes = payload.asBytes()
-            }
+        override fun onPayloadReceived(endpoint: String, payload: Payload) {
+            if (payload.type != Payload.Type.BYTES) return
+
+            val receivedBytes = payload.asBytes()!! // null if it's not bytes but we know it is
+
+            if (nearbyConnectionsEnabled) dataReceivedCallback(endpoint, receivedBytes)
         }
 
-        public override fun onPayloadTransferUpdate(endpointId: String, update: PayloadTransferUpdate) {
-            // Bytes payloads are sent as a single chunk, so you'll receive a SUCCESS update immediately
-            // after the call to onPayloadReceived().
+        override fun onPayloadTransferUpdate(endpoint: String, update: PayloadTransferUpdate) {
+            if (nearbyConnectionsEnabled) dataSendUpdateCallback(endpoint, update.bytesTransferred, update.totalBytes, update.status)
         }
     }
 
-    private fun startAdvertising(strategy: Strategy = Strategy.P2P_POINT_TO_POINT) {
+    @JvmStatic
+    fun enableNearbyConnectionsCallbacks() {
+        nearbyConnectionsEnabled = true
+    }
+
+    @JvmStatic
+    fun setDiscoveryName(name: String) {
+        nearbyConnectionsName = name
+    }
+
+    @JvmStatic
+    fun beginDiscovery() {
+        beginDiscovery(Strategy.P2P_POINT_TO_POINT)
+    }
+
+    @JvmStatic
+    fun beginAdvertising() {
+        beginAdvertising(Strategy.P2P_POINT_TO_POINT)
+    }
+
+    @JvmStatic
+    fun beginDiscovery(strategy: Strategy) {
+        if (!nearbyConnectionsEnabled) return
+
+        val discoveryOptions = DiscoveryOptions.Builder()
+            .setStrategy(strategy)
+            .build()
+
+        val context = activity.get() ?: return
+
+        Nearby.getConnectionsClient(context)
+            .startDiscovery(
+                context.packageName,
+                endpointDiscoveryCallback,
+                discoveryOptions
+            )
+            .addOnSuccessListener {
+                if (nearbyConnectionsEnabled) discoveryStartCallback()
+            }
+            .addOnFailureListener { error ->
+                if (nearbyConnectionsEnabled) discoveryFailureCallback(error.message ?: "unknown error")
+            }
+    }
+
+    @JvmStatic
+    fun beginAdvertising(strategy: Strategy) {
         val advertisingOptions = AdvertisingOptions.Builder()
             .setStrategy(strategy)
             .build()
@@ -131,62 +144,52 @@ object NearbyConnectionsUtils {
                 advertisingOptions
             )
             .addOnSuccessListener {
-                // We're advertising!
+                if (nearbyConnectionsEnabled) advertisingStartCallback()
             }
-            .addOnFailureListener { e ->
-                // We were unable to start advertising.
+            .addOnFailureListener { error ->
+                if (nearbyConnectionsEnabled) advertisingFailureCallback(error.message ?: "unknown error")
             }
     }
 
-    private fun startDiscovery(strategy: Strategy = Strategy.P2P_POINT_TO_POINT) {
-        val discoveryOptions = DiscoveryOptions.Builder()
-            .setStrategy(strategy)
-            .build()
+    @JvmStatic
+    fun endDiscovery() {
+        val context = activity.get() ?: return
+        Nearby.getConnectionsClient(context)
+            .stopDiscovery()
+    }
+
+    @JvmStatic
+    fun endAdvertising() {
+        val context = activity.get() ?: return
+        Nearby.getConnectionsClient(context)
+            .stopAdvertising()
+    }
+
+    @JvmStatic
+    fun requestConnection(endpoint: String) {
+        if (!nearbyConnectionsEnabled) return
 
         val context = activity.get() ?: return
         val name = nearbyConnectionsName ?: return
 
         Nearby.getConnectionsClient(context)
-            .startDiscovery(
-                context.packageName,
-                endpointDiscoveryCallback,
-                discoveryOptions
+            .requestConnection(
+                name,
+                endpoint,
+                connectionLifecycleCallback
             )
             .addOnSuccessListener {
-                // We're discovering!
+                if (nearbyConnectionsEnabled) connectionRequestSuccessCallback(endpoint)
             }
-            .addOnFailureListener { e ->
-                // We're unable to start discovering.
+            .addOnFailureListener { error ->
+                if (nearbyConnectionsEnabled) connectionRequestFailedCallback(endpoint, error.message ?: "unknown")
             }
-    }
-
-    @JvmStatic
-    fun enableNearbyConnectionsCallbacks() {
-        nearbyConnectionsEnabled = true
-    }
-
-    @JvmStatic
-    fun setDiscoveryName(name: String) {
-        nearbyConnectionsName = name
-    }
-
-    @JvmStatic
-    fun beginDiscovery(strategy: Strategy) {
-        TODO("balls")
-    }
-
-    @JvmStatic
-    fun beginAdvertising(strategy: Strategy) {
-        TODO("balls")
-    }
-
-    @JvmStatic
-    fun connectToEndpoint(endpoint: String) {
-        TODO("balls")
     }
 
     @JvmStatic
     fun acceptConnection(endpoint: String) {
+        if (!nearbyConnectionsEnabled) return
+
         val context = activity.get() ?: return
         Nearby.getConnectionsClient(context)
             .acceptConnection(endpoint, payloadCallback)
@@ -194,14 +197,20 @@ object NearbyConnectionsUtils {
 
     @JvmStatic
     fun rejectConnection(endpoint: String) {
+        if (!nearbyConnectionsEnabled) return
+
         val context = activity.get() ?: return
         Nearby.getConnectionsClient(context)
             .rejectConnection(endpoint)
     }
-x
+
     @JvmStatic
     fun sendData(endpoint: String, data: ByteArray) {
-        TODO("balls")
+        if (!nearbyConnectionsEnabled) return
+
+        val context = activity.get() ?: return
+        val bytesPayload = Payload.fromBytes(data)
+        Nearby.getConnectionsClient(context).sendPayload(endpoint, bytesPayload)
     }
 
     @JvmStatic
@@ -209,36 +218,41 @@ x
         TODO("balls")
     }
 
-
-
     // call enableDiscovery(enabled: Boolean) after providing local functions for all of these
     // call setDiscoveryName(name: String) to set a name you will appear as
 
     // call beginDiscovery(strategy: Strategy) or beginAdvertising(strategy: Strategy) where strategy is probably Strategy.P2P_POINT_TO_POINT
     // though actually for jni maybe it should just be an int
 
-    external fun discoveryStartCallback();
-    external fun discoveryFailureCallback(error: String);
-    external fun advertisingStartCallback();
-    external fun advertisingFailureCallback(error: String);
+    external fun discoveryStartCallback()
+    external fun discoveryFailureCallback(error: String)
+    external fun advertisingStartCallback()
+    external fun advertisingFailureCallback(error: String)
 
     // called for the discoverer
-    external fun endpointFoundCallback(endpoint: String);
-    external fun endpointLostCallback(endpoint: String);
+    external fun endpointFoundCallback(endpoint: String)
+    external fun endpointLostCallback(endpoint: String)
 
-    // call connectToEndpoint(endpoint: String) for the discoverer
+    // call requestConnection(endpoint: String) for the discoverer
 
-    external fun connectionInitiatedCallback(endpoint: String);
+    external fun connectionRequestSuccessCallback(endpoint: String)
+    external fun connectionRequestFailedCallback(endpoint: String, error: String)
+    external fun connectionInitiatedCallback(endpoint: String)
 
     // call acceptConnection(endpoint: String) for both
 
-    external fun connectionSuccessCallback(endpoint: String);
-    external fun connectionRejectedCallback(endpoint: String);
-    external fun connectionErrorCallback(endpoint: String);
+    external fun connectionSuccessCallback(endpoint: String)
+    external fun connectionRejectedCallback(endpoint: String)
+    external fun connectionBrokenCallback(endpoint: String)
+
+    // should call endDiscovery() or endAdvertisement() here
 
     // call sendData(endpoint: String, data: ByteArray) for both
 
-    external fun dataReceived(endpoint: String, data: ByteArray);
+    external fun dataSendUpdateCallback(endpoint: String, bytesTransferred: Long, totalBytes: Long, status: Int)
+    external fun dataReceivedCallback(endpoint: String, data: ByteArray)
 
-    external fun connectionClosedCallback(endpoint: String);
+    // call close(endpoint: String) here
+
+    external fun connectionClosedCallback(endpoint: String)
 }
