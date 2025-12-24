@@ -84,6 +84,15 @@ object NearbyConnectionsUtils {
         }
     }
 
+    fun integerToStrategy(integer: Int): Strategy? {
+        return when(integer) {
+            1 -> Strategy.P2P_CLUSTER
+            2 -> Strategy.P2P_POINT_TO_POINT
+            3 -> Strategy.P2P_STAR
+            else -> null
+        }
+    }
+
     @JvmStatic
     fun enableNearbyConnectionsCallbacks() {
         nearbyConnectionsEnabled = true
@@ -96,17 +105,19 @@ object NearbyConnectionsUtils {
 
     @JvmStatic
     fun beginDiscovery() {
-        beginDiscovery(Strategy.P2P_POINT_TO_POINT)
+        beginDiscovery(2) // Strategy.P2P_POINT_TO_POINT
     }
 
     @JvmStatic
     fun beginAdvertising() {
-        beginAdvertising(Strategy.P2P_POINT_TO_POINT)
+        beginAdvertising(2) // Strategy.P2P_POINT_TO_POINT
     }
 
     @JvmStatic
-    fun beginDiscovery(strategy: Strategy) {
+    fun beginDiscovery(strategy: Int) {
         if (!nearbyConnectionsEnabled) return
+
+        val strategy = integerToStrategy(strategy) ?: return
 
         val discoveryOptions = DiscoveryOptions.Builder()
             .setStrategy(strategy)
@@ -129,7 +140,11 @@ object NearbyConnectionsUtils {
     }
 
     @JvmStatic
-    fun beginAdvertising(strategy: Strategy) {
+    fun beginAdvertising(strategy: Int) {
+        if (!nearbyConnectionsEnabled) return
+
+        val strategy = integerToStrategy(strategy) ?: return
+
         val advertisingOptions = AdvertisingOptions.Builder()
             .setStrategy(strategy)
             .build()
@@ -225,8 +240,7 @@ object NearbyConnectionsUtils {
     // call enableDiscovery(enabled: Boolean) after providing local functions for all of these
     // call setDiscoveryName(name: String) to set a name you will appear as
 
-    // call beginDiscovery(strategy: Strategy) or beginAdvertising(strategy: Strategy) where strategy is probably Strategy.P2P_POINT_TO_POINT
-    // though actually for jni maybe it should just be an int
+    // call beginDiscovery(strategy: Int) or beginAdvertising(strategy: Int) where strategy is probably Strategy.P2P_POINT_TO_POINT (2)
 
     external fun discoveryStartCallback()
     external fun discoveryFailureCallback(error: String)
