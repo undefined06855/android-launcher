@@ -104,16 +104,6 @@ object NearbyConnectionsUtils {
     }
 
     @JvmStatic
-    fun beginDiscovery() {
-        beginDiscovery(2) // Strategy.P2P_POINT_TO_POINT
-    }
-
-    @JvmStatic
-    fun beginAdvertising() {
-        beginAdvertising(2) // Strategy.P2P_POINT_TO_POINT
-    }
-
-    @JvmStatic
     fun beginDiscovery(strategy: Int) {
         if (!nearbyConnectionsEnabled) return
 
