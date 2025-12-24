@@ -24,7 +24,7 @@ object NearbyConnectionsUtils {
     private lateinit var activity: WeakReference<AppCompatActivity>
 
     fun setContext(activity: AppCompatActivity) {
-        this.activity = WeakReference(activity);
+        this.activity = WeakReference(activity)
     }
 
     private var nearbyConnectionsEnabled: Boolean = false
@@ -91,6 +91,62 @@ object NearbyConnectionsUtils {
             3 -> Strategy.P2P_STAR
             else -> null
         }
+    }
+
+
+    // we need ACCESS_FINE_LOCATION, BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT, BLUETOOTH_SCAN and READ_EXTERNAL_STORAGE
+
+    private fun requiredPermissions(): Array<String> {
+        val perms = mutableListOf(
+            android.Manifest.permission.ACCESS_FINE_LOCATION
+        )
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            perms += android.Manifest.permission.BLUETOOTH_ADVERTISE
+            perms += android.Manifest.permission.BLUETOOTH_CONNECT
+            perms += android.Manifest.permission.BLUETOOTH_SCAN
+        } else {
+            perms += android.Manifest.permission.BLUETOOTH
+            perms += android.Manifest.permission.BLUETOOTH_ADMIN
+        }
+
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+            perms += android.Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+
+        return perms.toTypedArray()
+    }
+
+    @JvmStatic
+    fun hasPermissions(): Boolean {
+        val context = activity.get() ?: return false
+
+        return requiredPermissions().all { permission ->
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                permission
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    @JvmStatic
+    fun requestPermissions() {
+        val activity = activity.get() ?: return
+
+        val missingPermissions = requiredPermissions().filter { permission ->
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                activity,
+                permission
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+
+        if (missingPermissions.isEmpty()) return
+
+        androidx.core.app.ActivityCompat.requestPermissions(
+            activity,
+            missingPermissions.toTypedArray(),
+            1001 // permission request code
+        )
     }
 
     @JvmStatic
@@ -226,6 +282,8 @@ object NearbyConnectionsUtils {
         Nearby.getConnectionsClient(context)
             .disconnectFromEndpoint(endpoint)
     }
+
+    // call hasPermissions() to check if we have permissions, and if not call requestPermissions()
 
     // call enableDiscovery(enabled: Boolean) after providing local functions for all of these
     // call setDiscoveryName(name: String) to set a name you will appear as
