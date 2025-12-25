@@ -112,6 +112,7 @@ object NearbyConnectionsUtils {
 
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
             perms += android.Manifest.permission.READ_EXTERNAL_STORAGE
+            perms += android.Manifest.permission.NEARBY_WIFI_DEVICES
         }
 
         return perms.toTypedArray()
@@ -285,7 +286,7 @@ object NearbyConnectionsUtils {
 
     // call hasPermissions() to check if we have permissions, and if not call requestPermissions()
 
-    // call enableDiscovery(enabled: Boolean) after providing local functions for all of these
+    // call enableNearbyConnectionsCallbacks() after providing local functions for all of these
     // call setDiscoveryName(name: String) to set a name you will appear as
 
     // call beginDiscovery(strategy: Int) or beginAdvertising(strategy: Int) where strategy is probably Strategy.P2P_POINT_TO_POINT (2)
