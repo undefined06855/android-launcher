@@ -1,5 +1,6 @@
 package com.geode.launcher.utils
 
+import android.util.Log
 import androidx.annotation.Keep
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.nearby.Nearby
@@ -32,7 +33,7 @@ object NearbyConnectionsUtils {
 
     private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpoint: String, info: DiscoveredEndpointInfo) {
-            if (nearbyConnectionsEnabled) endpointFoundCallback(endpoint)
+            if (nearbyConnectionsEnabled) endpointFoundCallback(endpoint, info.endpointName)
         }
 
         override fun onEndpointLost(endpoint: String) {
@@ -94,25 +95,23 @@ object NearbyConnectionsUtils {
     }
 
 
-    // we need ACCESS_FINE_LOCATION, BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT, BLUETOOTH_SCAN and READ_EXTERNAL_STORAGE
-
     private fun requiredPermissions(): Array<String> {
-        val perms = mutableListOf(
-            android.Manifest.permission.ACCESS_FINE_LOCATION
-        )
+        val perms = mutableListOf<String>()
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            perms += android.Manifest.permission.BLUETOOTH_ADVERTISE
-            perms += android.Manifest.permission.BLUETOOTH_CONNECT
-            perms += android.Manifest.permission.BLUETOOTH_SCAN
-        } else {
-            perms += android.Manifest.permission.BLUETOOTH
-            perms += android.Manifest.permission.BLUETOOTH_ADMIN
+        perms += android.Manifest.permission.CHANGE_WIFI_STATE
+        perms += android.Manifest.permission.ACCESS_FINE_LOCATION
+        perms += android.Manifest.permission.ACCESS_COARSE_LOCATION
+        perms += android.Manifest.permission.BLUETOOTH_ADMIN
+        perms += android.Manifest.permission.BLUETOOTH
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            perms += android.Manifest.permission.NEARBY_WIFI_DEVICES
         }
 
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
-            perms += android.Manifest.permission.READ_EXTERNAL_STORAGE
-            perms += android.Manifest.permission.NEARBY_WIFI_DEVICES
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            perms += android.Manifest.permission.BLUETOOTH_SCAN
+            perms += android.Manifest.permission.BLUETOOTH_CONNECT
+            perms += android.Manifest.permission.BLUETOOTH_ADVERTISE
         }
 
         return perms.toTypedArray()
@@ -121,6 +120,14 @@ object NearbyConnectionsUtils {
     @JvmStatic
     fun hasPermissions(): Boolean {
         val context = activity.get() ?: return false
+
+        for (permission in requiredPermissions()) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(context, permission) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                Log.w("Geode", "permission $permission not granted!")
+            }
+        }
+
+        Log.i("Geode", "our sdk version is ${android.os.Build.VERSION.SDK_INT} just saying")
 
         return requiredPermissions().all { permission ->
             androidx.core.content.ContextCompat.checkSelfPermission(
@@ -297,7 +304,7 @@ object NearbyConnectionsUtils {
     external fun advertisingFailureCallback(error: String)
 
     // called for the discoverer
-    external fun endpointFoundCallback(endpoint: String)
+    external fun endpointFoundCallback(endpoint: String, name: String)
     external fun endpointLostCallback(endpoint: String)
 
     // call requestConnection(endpoint: String) for the discoverer
